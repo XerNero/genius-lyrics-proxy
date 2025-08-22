@@ -1,14 +1,5 @@
-import fetch from "node-fetch";
+// Tidak perlu import node-fetch; Node 18+ sudah ada fetch global.
 
-/**
- * Serverless function (Vercel)
- * GET /api/lyrics?title=Judul&artist=Artis
- *
- * Catatan:
- * - Genius API tidak menyediakan lirik tersinkron (timestamp).
- * - Kita cari lagu via API, lalu ambil lirik dari halaman HTML (scrape).
- * - Simpan "Client Access Token" Genius di ENV: GENIUS_TOKEN
- */
 export default async function handler(req, res) {
   try {
     const { title = "", artist = "" } = req.query;
@@ -36,34 +27,27 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Ambil kandidat pertama
     const songUrl = hits[0].result.url;
 
-    // 2) Ambil halaman lirik (HTML) & ekstrak teks
+    // 2) Ambil HTML halaman lirik & ekstrak teks
     const html = await fetch(songUrl).then(r => r.text());
-
-    // Genius sering menggunakan beberapa container; cari semua container lirik
     const containers = [...html.matchAll(/<div class="Lyrics__Container[^>]*>([\s\S]*?)<\/div>/g)];
     let text = containers
       .map(m =>
         m[1]
-          .replace(/<br\/>?/g, "\n")
+          .replace(/<br\/?>/g, "\n")
           .replace(/<[^>]+>/g, "")
           .replace(/&amp;/g, "&")
-          .replace(/&quot;/g, "\"")
+          .replace(/&quot;/g, '"')
           .replace(/&#39;/g, "'")
       )
       .join("\n")
       .trim();
 
     if (!text) {
-      // Fallback lama (beberapa halaman pakai struktur berbeda)
       const m = html.match(/<div class="lyrics">[\s\S]*?<p>([\s\S]*?)<\/p>/);
       if (m) {
-        text = m[1]
-          .replace(/<br\/>?/g, "\n")
-          .replace(/<[^>]+>/g, "")
-          .trim();
+        text = m[1].replace(/<br\/?>/g, "\n").replace(/<[^>]+>/g, "").trim();
       }
     }
 
@@ -75,5 +59,3 @@ export default async function handler(req, res) {
     res.status(500).send("Internal error");
   }
 }
-
-
