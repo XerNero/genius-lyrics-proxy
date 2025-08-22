@@ -1,0 +1,1 @@
+'{ "version": 2, "functions": { "api/lyrics.js": { "runtime": "nodejs18.x" } } }' 
